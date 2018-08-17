@@ -9,23 +9,205 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-## Read Data
-Download data from Google Drive into local
-```{r data, message=FALSE, warning=FALSE, include=FALSE}
+
+# load packages
 library(tidyverse)
 library(knitr)
-
-# load data
-cookie_match <- readRDS('data/processed/cookie_match.Rds')
-event <- readRDS('data/processed/event.Rds')
+library(ggplot2)
 ```
 
-```{r}
-# Q1-1, number of events/brand/day
+This RMarkdown document is for report purpose only. All codes can be checked in [github](https://github.com/trinityluo/PebblePostProblems.git).
+
+## Read Data
+
+1. Manually download data from Google Drive into local disk. (An R package "googledrive" can automate this step)
+
+2. Read csv files, then combine them.
+
+```{r read_data, echo=TRUE, message=FALSE, warning=FALSE}
+# obtain file names
+filenames_cookie <- dir('data/raw/cookie_match_sample', full.names = T)
+filenames_event <- dir('data/raw/event_sample', full.names = T)
+
+# read csv files into one dataframe
+cookie_match <- do.call(rbind, lapply(filenames_cookie, read.csv,
+                                       stringsAsFactors = F,
+                                       colClasses = c('character', 'character', 'Date')))
+
+event <- do.call(rbind, lapply(filenames_event, read.csv,
+                                stringsAsFactors = F,
+                                colClasses = c(rep('character', 4), 'Date')))
+
+# save as R binary data files to fast read data again if something happens
+saveRDS(cookie_match, 'data/processed/cookie_match.Rds')
+saveRDS(event, 'data/processed/event.Rds')
+# cookie_match <- readRDS('data/processed/cookie_match.Rds')
+# event <- readRDS('data/processed/event.Rds')
+```
+
+3. Merge data to find matched events
+
+```{r merge_data, echo=TRUE}
+# find all matched events
+matched_events <- event %>% 
+  inner_join(cookie_match, by = c('ppid', 'date'))
+```
+
+
+## Question 1
+
+#### What are the number of events for each brand for each day?
+
+```{r Q1-1}
+
+# number of events/brand/day
 num_events <- event %>% 
   count(brand_id, date)
 
 kable(num_events)
 ```
 
+#### What are the number of matched events for each brand for each day? 
+
+```{r Q1-2}
+
+# number of Matched events/brand/day
+num_match_events <- matched_events %>% 
+  inner_join(cookie_match, by = c('ppid', 'date')) %>% 
+  count(brand_id, date)
+
+kable(num_match_events)
+```
+
+## Question 2
+
+#### What is the average number of events for each Day of Week for each brand? Can you create a graph or plot to visualize this information?
+```{r Q2}
+# create new column for day of week
+num_events <- num_events %>% 
+  mutate(day = weekdays(date))
+
+# calculate average events per day of week
+avg_events_dayofweek <- num_events %>% 
+  group_by(brand_id, day) %>% 
+  summarise(avg_evnts = mean(n))
+
+# plot
+week <- c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+avg_events_dayofweek$day <- factor(avg_events_dayofweek$day, levels = week)
+
+ggplot(avg_events_dayofweek, aes(x=day, y=avg_evnts, fill=brand_id)) +
+  geom_bar(stat='identity', position=position_dodge()) +
+  scale_fill_brewer(palette="Paired") +
+  theme_minimal() +
+  xlab('Day of week') + 
+  ylab('Avg Events') +
+  ggtitle('Average number of events for each Day of Week for each brand')
+```
+
+
+## Question 3
+
+#### If you have any interesting observations about the sample data, please describe them here.
+
+```{r Q3, echo=TRUE}
+str(event)
+
+# unique values in event_type & device_family
+unique(event$event_type)
+unique(event$device_family)
+
+# Total events of each brand
+table(event$brand_id)
+
+# Total events of each type
+table(event$event_type)
+
+# Total events of each device family
+table(event$device_family)
+```
+
+Note that there are duplicates both in event and cookie_match df, I will use ppid "78C1840A54EE7F57EE1622290236DC03" as an example. Possible reason is the customer visit the web mutiple times per day.
+```{r Q3_2}
+# duplicates in event
+event %>% filter(ppid == '78C1840A54EE7F57EE1622290236DC03') %>% kable()
+
+# duplicateds in cookie_match
+cookie_match %>% filter(ppid == '78C1840A54EE7F57EE1622290236DC03') %>% kable()
+```
+
+
+
+## Question 4
+
+#### How do you test the difference between the conversion rates for test group and control group is statistically significant or not?
+
+```{r Q4_1, echo=TRUE}
+# create contingency table
+mat <- matrix(c(500, 200, 10000, 5000), nrow = 2, 
+             dimnames = list(c('test', 'control'), 
+                             c('converted', 'not_converted')))
+chisq.test(mat)
+
+```
+p-value = 0.01001, reject null hypothesis. It gives the strong evidence to suggest that test and control group have statistical significance difference.
+
+#### What if the test group has 10000 users and 2 converters, and the control group has 4000 users and 1 converter?
+
+Sample size is too small to be statistically significant.
+
+## Question 5
+
+1. How will you formulate the problem?
+
+Here, the outcome(converted, not_converted) that we want to predict is binary categorical outcome, and the label variable is given. So, this is a supervise learning classification problem. 
+I feel this analysis is sensitive to date, I may consider to obtain the day of week, seasonality, holiday as well. In other words, this may consider as a time series problem as well. 
+
+2. What users will you use as training and testing examples?
+
+For this two week data, I will use first 10 days data as the training dataset, the rest as testing.
+
+3. What user features/data  do you plan to collect?
+    + Demographic data like age, gender, income, education, employment and etc.
+    + Social media data like facebook, twitter, and etc.
+    + Conversion history.
+    + Day and time when the user access the brand web.
+    + Device information.
+    + Number of times that the user visited the brand web.
+
+4. How will you preprocess the collected data to generate input for your system?
+
+Basiclly, cleaning, transforming. Not going to go deep in cleaning, because it may vary depends on different data. For transforming,
+
+* Create variables. For example, I may create zipcode group if user zipcode is available. This step is based on the marketing expertise suggestion as well as each sub-group contains at least enough events(I prefer 10 cases) to build the model.
+* Create dummy variables. 
+* Imputation variables.
+* Scaleing and centering.
+* Run PCA/MCA analysis to try to get insights of the features, reduce the dimensions of the features. This step include remove correlated features, remove zero/near-zero variance features.
+
+
+5. What algorithm(s) to use and why?
+
+All the algorithms that I pick will friendly for binary category outcome, mixed feature types supervise learning classification problem. 
+I will try use elastic regression first, since the training time was the fastest one. Then I can get an general view of the model. Then will try use logistic regression, random forest, svm, and etc.
+
+6. How will you evaluate the performance?
+
+Cross-validation while tring the model and use AUC, confusion matrix(accuracy, sensitivity, specificity) to evaluate the model as well as evaluate the performance while using the test dataset.
+
+## Question 6
+
+Continuous from built model from Question 5, the uplift modeling's general Steps:
+
+1. Predict the outcome on the promotional item applied users.
+2. Predict the outcome on the no promotional item applied users.
+3. Find the uplift as the difference in the rates (step 1 - step 2).
+4. Find upper and lower confidence limits on the uplift.
+
+Results:
+
+* If confidence limits of the uplift includes zero. The promotion effect is unknow and not significant.
+* If confidence limits of the uplift significantly greater than zero, those are swing user.
+* If confidience limits of the uplift significantly less than zero, those are the no purchase user.
+
+The uplift package in R can handle this type of modeling.

@@ -129,9 +129,68 @@
 \begin{document}
 \maketitle
 
+This RMarkdown document is for report purpose only. All codes can be
+checked in
+\href{https://github.com/trinityluo/PebblePostProblems.git}{github}.
+
+\subsection{Read Data}\label{read-data}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  Manually download data from Google Drive into local disk. (An R
+  package ``googledrive'' can automate this step)
+\item
+  Read csv files, then combine them.
+\end{enumerate}
+
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{# Q1-1, number of events/brand/day}
+\CommentTok{# obtain file names}
+\NormalTok{filenames_cookie <-}\StringTok{ }\KeywordTok{dir}\NormalTok{(}\StringTok{'data/raw/cookie_match_sample'}\NormalTok{, }\DataTypeTok{full.names =}\NormalTok{ T)}
+\NormalTok{filenames_event <-}\StringTok{ }\KeywordTok{dir}\NormalTok{(}\StringTok{'data/raw/event_sample'}\NormalTok{, }\DataTypeTok{full.names =}\NormalTok{ T)}
+
+\CommentTok{# read csv files into one dataframe}
+\NormalTok{cookie_match <-}\StringTok{ }\KeywordTok{do.call}\NormalTok{(rbind, }\KeywordTok{lapply}\NormalTok{(filenames_cookie, read.csv,}
+                                       \DataTypeTok{stringsAsFactors =}\NormalTok{ F,}
+                                       \DataTypeTok{colClasses =} \KeywordTok{c}\NormalTok{(}\StringTok{'character'}\NormalTok{, }\StringTok{'character'}\NormalTok{, }\StringTok{'Date'}\NormalTok{)))}
+
+\NormalTok{event <-}\StringTok{ }\KeywordTok{do.call}\NormalTok{(rbind, }\KeywordTok{lapply}\NormalTok{(filenames_event, read.csv,}
+                                \DataTypeTok{stringsAsFactors =}\NormalTok{ F,}
+                                \DataTypeTok{colClasses =} \KeywordTok{c}\NormalTok{(}\KeywordTok{rep}\NormalTok{(}\StringTok{'character'}\NormalTok{, }\DecValTok{4}\NormalTok{), }\StringTok{'Date'}\NormalTok{)))}
+
+\CommentTok{# save as R binary data files to fast read data again if something happens}
+\KeywordTok{saveRDS}\NormalTok{(cookie_match, }\StringTok{'data/processed/cookie_match.Rds'}\NormalTok{)}
+\KeywordTok{saveRDS}\NormalTok{(event, }\StringTok{'data/processed/event.Rds'}\NormalTok{)}
+\CommentTok{# cookie_match <- readRDS('data/processed/cookie_match.Rds')}
+\CommentTok{# event <- readRDS('data/processed/event.Rds')}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{2}
+\tightlist
+\item
+  Merge data to find matched events
+\end{enumerate}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# find all matched events}
+\NormalTok{matched_events <-}\StringTok{ }\NormalTok{event }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{inner_join}\NormalTok{(cookie_match, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{'ppid'}\NormalTok{, }\StringTok{'date'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Question 1}\label{question-1}
+
+\paragraph{What are the number of events for each brand for each
+day?}\label{what-are-the-number-of-events-for-each-brand-for-each-day}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# number of events/brand/day}
 \NormalTok{num_events <-}\StringTok{ }\NormalTok{event }\OperatorTok{%>%}\StringTok{ }
 \StringTok{  }\KeywordTok{count}\NormalTok{(brand_id, date)}
 
@@ -188,6 +247,464 @@ brand\_id & date & n\tabularnewline
 1472 & 2018-03-28 & 73309\tabularnewline
 \bottomrule
 \end{longtable}
+
+\paragraph{What are the number of matched events for each brand for each
+day?}\label{what-are-the-number-of-matched-events-for-each-brand-for-each-day}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# number of Matched events/brand/day}
+\NormalTok{num_match_events <-}\StringTok{ }\NormalTok{matched_events }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{inner_join}\NormalTok{(cookie_match, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{'ppid'}\NormalTok{, }\StringTok{'date'}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{count}\NormalTok{(brand_id, date)}
+
+\KeywordTok{kable}\NormalTok{(num_match_events)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}llr@{}}
+\toprule
+brand\_id & date & n\tabularnewline
+\midrule
+\endhead
+1034 & 2018-03-15 & 25\tabularnewline
+1034 & 2018-03-16 & 19\tabularnewline
+1034 & 2018-03-17 & 6\tabularnewline
+1034 & 2018-03-18 & 8\tabularnewline
+1034 & 2018-03-19 & 14\tabularnewline
+1034 & 2018-03-20 & 12\tabularnewline
+1034 & 2018-03-21 & 85\tabularnewline
+1034 & 2018-03-22 & 11\tabularnewline
+1034 & 2018-03-23 & 77\tabularnewline
+1034 & 2018-03-24 & 9\tabularnewline
+1034 & 2018-03-25 & 6\tabularnewline
+1034 & 2018-03-26 & 18\tabularnewline
+1034 & 2018-03-27 & 8\tabularnewline
+1034 & 2018-03-28 & 11\tabularnewline
+1101 & 2018-03-15 & 469\tabularnewline
+1101 & 2018-03-16 & 508\tabularnewline
+1101 & 2018-03-17 & 493\tabularnewline
+1101 & 2018-03-18 & 634\tabularnewline
+1101 & 2018-03-19 & 452\tabularnewline
+1101 & 2018-03-20 & 464\tabularnewline
+1101 & 2018-03-21 & 478\tabularnewline
+1101 & 2018-03-22 & 383\tabularnewline
+1101 & 2018-03-23 & 412\tabularnewline
+1101 & 2018-03-24 & 430\tabularnewline
+1101 & 2018-03-25 & 557\tabularnewline
+1101 & 2018-03-26 & 415\tabularnewline
+1101 & 2018-03-27 & 457\tabularnewline
+1101 & 2018-03-28 & 1638\tabularnewline
+1472 & 2018-03-15 & 76917\tabularnewline
+1472 & 2018-03-16 & 93598\tabularnewline
+1472 & 2018-03-17 & 82869\tabularnewline
+1472 & 2018-03-18 & 85015\tabularnewline
+1472 & 2018-03-19 & 80829\tabularnewline
+1472 & 2018-03-20 & 88260\tabularnewline
+1472 & 2018-03-21 & 81874\tabularnewline
+1472 & 2018-03-22 & 72562\tabularnewline
+1472 & 2018-03-23 & 56429\tabularnewline
+1472 & 2018-03-24 & 78506\tabularnewline
+1472 & 2018-03-25 & 101238\tabularnewline
+1472 & 2018-03-26 & 124461\tabularnewline
+1472 & 2018-03-27 & 63626\tabularnewline
+1472 & 2018-03-28 & 51861\tabularnewline
+\bottomrule
+\end{longtable}
+
+\subsection{Question 2}\label{question-2}
+
+\paragraph{What is the average number of events for each Day of Week for
+each brand? Can you create a graph or plot to visualize this
+information?}\label{what-is-the-average-number-of-events-for-each-day-of-week-for-each-brand-can-you-create-a-graph-or-plot-to-visualize-this-information}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# create new column for day of week}
+\NormalTok{num_events <-}\StringTok{ }\NormalTok{num_events }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{day =} \KeywordTok{weekdays}\NormalTok{(date))}
+
+\CommentTok{# calculate average events per day of week}
+\NormalTok{avg_events_dayofweek <-}\StringTok{ }\NormalTok{num_events }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{group_by}\NormalTok{(brand_id, day) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{summarise}\NormalTok{(}\DataTypeTok{avg_evnts =} \KeywordTok{mean}\NormalTok{(n))}
+
+\CommentTok{# plot}
+\NormalTok{week <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"Sunday"}\NormalTok{, }\StringTok{"Monday"}\NormalTok{, }\StringTok{"Tuesday"}\NormalTok{, }\StringTok{"Wednesday"}\NormalTok{, }\StringTok{"Thursday"}\NormalTok{, }\StringTok{"Friday"}\NormalTok{, }\StringTok{"Saturday"}\NormalTok{)}
+\NormalTok{avg_events_dayofweek}\OperatorTok{$}\NormalTok{day <-}\StringTok{ }\KeywordTok{factor}\NormalTok{(avg_events_dayofweek}\OperatorTok{$}\NormalTok{day, }\DataTypeTok{levels =}\NormalTok{ week)}
+
+\KeywordTok{ggplot}\NormalTok{(avg_events_dayofweek, }\KeywordTok{aes}\NormalTok{(}\DataTypeTok{x=}\NormalTok{day, }\DataTypeTok{y=}\NormalTok{avg_evnts, }\DataTypeTok{fill=}\NormalTok{brand_id)) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{geom_bar}\NormalTok{(}\DataTypeTok{stat=}\StringTok{'identity'}\NormalTok{, }\DataTypeTok{position=}\KeywordTok{position_dodge}\NormalTok{()) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{scale_fill_brewer}\NormalTok{(}\DataTypeTok{palette=}\StringTok{"Paired"}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{theme_minimal}\NormalTok{() }\OperatorTok{+}
+\StringTok{  }\KeywordTok{xlab}\NormalTok{(}\StringTok{'Day of week'}\NormalTok{) }\OperatorTok{+}\StringTok{ }
+\StringTok{  }\KeywordTok{ylab}\NormalTok{(}\StringTok{'Avg Events'}\NormalTok{) }\OperatorTok{+}
+\StringTok{  }\KeywordTok{ggtitle}\NormalTok{(}\StringTok{'Average number of events for each Day of Week for each brand'}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{PebblePostProblemAnswer_files/figure-latex/Q2-1.pdf}
+
+\subsection{Question 3}\label{question-3}
+
+\paragraph{If you have any interesting observations about the sample
+data, please describe them
+here.}\label{if-you-have-any-interesting-observations-about-the-sample-data-please-describe-them-here.}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{str}\NormalTok{(event)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 'data.frame':    1389990 obs. of  5 variables:
+##  $ brand_id     : chr  "1472" "1472" "1472" "1472" ...
+##  $ ppid         : chr  "35cd25e7-0edd-4094-8933-fe69adfc8dd1" "c6572797-d795-4d87-8964-8eb0bd0b01cf" "fcba9310-ff29-4576-bb99-c2cd800e63f6" "a54cbdc6-85ab-47bc-a0e2-aae928ed115c" ...
+##  $ event_type   : chr  "seg" "seg" "seg" "seg" ...
+##  $ device_family: chr  "Desktop" "Desktop" "Desktop" "Phone" ...
+##  $ date         : Date, format: "2018-03-20" "2018-03-20" ...
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# unique values in event_type & device_family}
+\KeywordTok{unique}\NormalTok{(event}\OperatorTok{$}\NormalTok{event_type)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "seg"  "conv"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{unique}\NormalTok{(event}\OperatorTok{$}\NormalTok{device_family)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Desktop" "Phone"   "Tablet"  "Other"   ""
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Total events of each brand}
+\KeywordTok{table}\NormalTok{(event}\OperatorTok{$}\NormalTok{brand_id)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##    1034    1101    1472 
+##   21256  187634 1181100
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Total events of each type}
+\KeywordTok{table}\NormalTok{(event}\OperatorTok{$}\NormalTok{event_type)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##    conv     seg 
+##    3214 1386776
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Total events of each device family}
+\KeywordTok{table}\NormalTok{(event}\OperatorTok{$}\NormalTok{device_family)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##         Desktop   Other   Phone  Tablet 
+##       2 1200507     806  147638   41037
+\end{verbatim}
+
+Note that there are duplicates both in event and cookie\_match df, I
+will use ppid ``78C1840A54EE7F57EE1622290236DC03'' as an example.
+Possible reason is the customer visit the web mutiple times per day.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# duplicates in event}
+\NormalTok{event }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(ppid }\OperatorTok{==}\StringTok{ '78C1840A54EE7F57EE1622290236DC03'}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{kable}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}lllll@{}}
+\toprule
+brand\_id & ppid & event\_type & device\_family & date\tabularnewline
+\midrule
+\endhead
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-20\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-20\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-20\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-20\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-19\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-19\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-19\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-20\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-20\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-22\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-23\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-21\tabularnewline
+1472 & 78C1840A54EE7F57EE1622290236DC03 & seg & Desktop &
+2018-03-15\tabularnewline
+\bottomrule
+\end{longtable}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# duplicateds in cookie_match}
+\NormalTok{cookie_match }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(ppid }\OperatorTok{==}\StringTok{ '78C1840A54EE7F57EE1622290236DC03'}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{kable}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule
+ppid & matched\_id & date\tabularnewline
+\midrule
+\endhead
+78C1840A54EE7F57EE1622290236DC03 &
+AB7AE8BE80B83DC361D6AD726140E9726BC970BC & 2018-03-20\tabularnewline
+78C1840A54EE7F57EE1622290236DC03 &
+AB7AE8BE80B83DC361D6AD726140E9726BC970BC & 2018-03-22\tabularnewline
+78C1840A54EE7F57EE1622290236DC03 &
+AB7AE8BE80B83DC361D6AD726140E9726BC970BC & 2018-03-23\tabularnewline
+78C1840A54EE7F57EE1622290236DC03 &
+AB7AE8BE80B83DC361D6AD726140E9726BC970BC & 2018-03-20\tabularnewline
+\bottomrule
+\end{longtable}
+
+\subsection{Question 4}\label{question-4}
+
+\paragraph{How do you test the difference between the conversion rates
+for test group and control group is statistically significant or
+not?}\label{how-do-you-test-the-difference-between-the-conversion-rates-for-test-group-and-control-group-is-statistically-significant-or-not}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# create contingency table}
+\NormalTok{mat <-}\StringTok{ }\KeywordTok{matrix}\NormalTok{(}\KeywordTok{c}\NormalTok{(}\DecValTok{500}\NormalTok{, }\DecValTok{200}\NormalTok{, }\DecValTok{10000}\NormalTok{, }\DecValTok{5000}\NormalTok{), }\DataTypeTok{nrow =} \DecValTok{2}\NormalTok{, }
+             \DataTypeTok{dimnames =} \KeywordTok{list}\NormalTok{(}\KeywordTok{c}\NormalTok{(}\StringTok{'test'}\NormalTok{, }\StringTok{'control'}\NormalTok{), }
+                             \KeywordTok{c}\NormalTok{(}\StringTok{'converted'}\NormalTok{, }\StringTok{'not_converted'}\NormalTok{)))}
+\KeywordTok{chisq.test}\NormalTok{(mat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##  Pearson's Chi-squared test with Yates' continuity correction
+## 
+## data:  mat
+## X-squared = 6.633, df = 1, p-value = 0.01001
+\end{verbatim}
+
+p-value = 0.01001, reject null hypothesis. It gives the strong evidence
+to suggest that test and control group have statistical significance
+difference.
+
+\paragraph{What if the test group has 10000 users and 2 converters, and
+the control group has 4000 users and 1
+converter?}\label{what-if-the-test-group-has-10000-users-and-2-converters-and-the-control-group-has-4000-users-and-1-converter}
+
+Sample size is too small to be statistically significant.
+
+\subsection{Question 5}\label{question-5}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  How will you formulate the problem?
+\end{enumerate}
+
+Here, the outcome(converted, not\_converted) that we want to predict is
+binary categorical outcome, and the label variable is given. So, this is
+a supervise learning classification problem. I feel this analysis is
+sensitive to date, I may consider to obtain the day of week,
+seasonality, holiday as well. In other words, this may consider as a
+time series problem as well.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{1}
+\tightlist
+\item
+  What users will you use as training and testing examples?
+\end{enumerate}
+
+For this two week data, I will use first 10 days data as the training
+dataset, the rest as testing.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{2}
+\tightlist
+\item
+  What user features/data do you plan to collect?
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Demographic data like age, gender, income, education, employment and
+    etc.
+  \item
+    Social media data like facebook, twitter, and etc.
+  \item
+    Conversion history.
+  \item
+    Day and time when the user access the brand web.
+  \item
+    Device information.
+  \item
+    Number of times that the user visited the brand web.
+  \end{itemize}
+\item
+  How will you preprocess the collected data to generate input for your
+  system?
+\end{enumerate}
+
+Basiclly, cleaning, transforming. Not going to go deep in cleaning,
+because it may vary depends on different data. For transforming,
+
+\begin{itemize}
+\tightlist
+\item
+  Create variables. For example, I may create zipcode group if user
+  zipcode is available. This step is based on the marketing expertise
+  suggestion as well as each sub-group contains at least enough events(I
+  prefer 10 cases) to build the model.
+\item
+  Create dummy variables.
+\item
+  Imputation variables.
+\item
+  Scaleing and centering.
+\item
+  Run PCA/MCA analysis to try to get insights of the features, reduce
+  the dimensions of the features. This step include remove correlated
+  features, remove zero/near-zero variance features.
+\end{itemize}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{4}
+\tightlist
+\item
+  What algorithm(s) to use and why?
+\end{enumerate}
+
+All the algorithms that I pick will friendly for binary category
+outcome, mixed feature types supervise learning classification problem.
+I will try use elastic regression first, since the training time was the
+fastest one. Then I can get an general view of the model. Then will try
+use logistic regression, random forest, svm, and etc.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{5}
+\tightlist
+\item
+  How will you evaluate the performance?
+\end{enumerate}
+
+Cross-validation while tring the model and use AUC, confusion
+matrix(accuracy, sensitivity, specificity) to evaluate the model as well
+as evaluate the performance while using the test dataset.
+
+\subsection{Question 6}\label{question-6}
+
+Continuous from built model from Question 5, the uplift modeling's
+general Steps:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Predict the outcome on the promotional item applied users.
+\item
+  Predict the outcome on the no promotional item applied users.
+\item
+  Find the uplift as the difference in the rates (step 1 - step 2).
+\item
+  Find upper and lower confidence limits on the uplift.
+\end{enumerate}
+
+Results:
+
+\begin{itemize}
+\tightlist
+\item
+  If confidence limits of the uplift includes zero. The promotion effect
+  is unknow and not significant.
+\item
+  If confidence limits of the uplift significantly greater than zero,
+  those are swing user.
+\item
+  If confidience limits of the uplift significantly less than zero,
+  those are the no purchase user.
+\end{itemize}
+
+The uplift package in R can handle this type of modeling.
 
 
 \end{document}
