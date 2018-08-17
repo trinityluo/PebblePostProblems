@@ -1,0 +1,31 @@
+---
+title: "Pebble Post Problem Answer"
+author: "Xiaosheng Luo"
+date: "August 17, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Read Data
+Download data from Google Drive into local
+```{r data, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(knitr)
+
+# load data
+cookie_match <- readRDS('data/processed/cookie_match.Rds')
+event <- readRDS('data/processed/event.Rds')
+```
+
+```{r}
+# Q1-1, number of events/brand/day
+num_events <- event %>% 
+  count(brand_id, date)
+
+kable(num_events)
+```
+
